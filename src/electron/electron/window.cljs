@@ -15,8 +15,9 @@
 (defonce *quitting? (atom false))
 
 (def MAIN_WINDOW_ENTRY (if dev?
-                         ;"http://localhost:3001"
-                         (str "file://" (node-path/join js/__dirname "index.html"))
+                         ;; Prefer shadow-cljs HTTP so renderer hot-reloads CSS/JS.
+                         ;; Fall back to file:// only if you intentionally disable the watch server.
+                         "http://localhost:3001"
                          (str "file://" (node-path/join js/__dirname "electron.html"))))
 
 (defn create-main-window!

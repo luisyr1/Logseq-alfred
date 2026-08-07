@@ -1,0 +1,173 @@
+/* In-app component guide modal */
+
+.cp__component-guide {
+  width: min(40rem, calc(100vw - 2.5rem));
+  max-height: min(86vh, 52rem);
+  display: flex;
+  flex-direction: column;
+  padding: .35rem;
+}
+
+.cp__component-guide__header {
+  padding: 1rem 1.15rem 1.1rem;
+  border-left: 3px solid var(--ls-link-text-color);
+  flex: 0 0 auto;
+
+  h1 {
+    margin: .85rem 0 .4rem;
+    font-size: 1.55rem;
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    color: var(--ls-primary-text-color);
+  }
+
+  p {
+    margin: 0;
+    max-width: 34rem;
+    line-height: 1.5;
+    color: var(--ls-secondary-text-color);
+    font-size: .9rem;
+  }
+}
+
+.cp__component-guide__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .68rem;
+  font-weight: 650;
+  letter-spacing: .12em;
+  color: var(--ls-secondary-text-color);
+}
+
+.cp__component-guide__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 6px;
+  color: var(--ls-primary-background-color);
+  background: var(--ls-link-text-color);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.cp__component-guide__version {
+  margin-left: auto;
+  padding: .2rem .45rem;
+  border: 1px solid var(--ls-border-color);
+  border-radius: 999px;
+  letter-spacing: .06em;
+}
+
+.cp__component-guide__body {
+  flex: 1 1 auto;
+  overflow: auto;
+  display: grid;
+
+  /* grid items default to min-width:auto, which lets long code lines widen the
+     whole modal instead of scrolling inside their own <pre> */
+  grid-template-columns: minmax(0, 1fr);
+  gap: .65rem;
+  margin: .5rem 0 .25rem;
+  padding-right: .15rem;
+}
+
+.cp__component-guide-section {
+  min-width: 0;
+  padding: .9rem 1rem 1rem;
+  border-radius: var(--ls-border-radius-medium, 8px);
+  background: var(--ls-secondary-background-color);
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    gap: .65rem;
+    margin-bottom: .55rem;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--ls-primary-text-color);
+  }
+
+  p, li {
+    font-size: .84rem;
+    line-height: 1.5;
+    color: var(--ls-secondary-text-color);
+  }
+
+  p {
+    margin: 0 0 .45rem;
+  }
+
+  ul {
+    margin: 0 0 .55rem 1.1rem;
+    padding: 0;
+  }
+
+  li {
+    margin: .2rem 0;
+  }
+
+  code {
+    font-size: .78em;
+    padding: .05rem .3rem;
+    border-radius: 4px;
+    background: var(--ls-tertiary-background-color, rgba(0, 0, 0, .06));
+  }
+}
+
+.cp__component-guide-section__icon {
+  display: inline-flex;
+  color: var(--ls-link-text-color);
+  margin-top: .1rem;
+}
+
+.cp__component-guide-section__kicker {
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--ls-link-text-color);
+  margin-bottom: .15rem;
+}
+
+.cp__component-guide-code {
+  margin: .35rem 0 .5rem;
+  padding: .7rem .8rem;
+  border-radius: 8px;
+  border: 1px solid var(--ls-border-color);
+  background: var(--ls-primary-background-color);
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  font-size: .75rem;
+  line-height: 1.45;
+  color: var(--ls-primary-text-color);
+  white-space: pre;
+
+  code {
+    background: transparent;
+    padding: 0;
+    font-size: inherit;
+  }
+}
+
+.cp__component-guide-hint {
+  margin: .35rem 0 0 !important;
+  font-size: .78rem !important;
+  opacity: .9;
+}
+
+.cp__component-guide__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .65rem 1rem .25rem;
+  font-size: .72rem;
+  color: var(--ls-secondary-text-color);
+  flex: 0 0 auto;
+}

@@ -1,5 +1,6 @@
 (ns frontend.components.header
   (:require [cljs-bean.core :as bean]
+            [frontend.components.component-guide :as component-guide]
             [frontend.components.export :as export]
             [frontend.components.page-menu :as page-menu]
             [frontend.components.plugins :as plugins]
@@ -154,6 +155,10 @@
          {:title (str "Novedades de Alfred · " version)
           :options {:on-click open-alfred-whats-new!}
           :icon (ui/icon "sparkles")})
+
+       {:title "Component guide"
+        :options {:on-click component-guide/open!}
+        :icon (ui/icon "book-2")}
 
        (when config/lsp-enabled?
          {:title (t :plugins)

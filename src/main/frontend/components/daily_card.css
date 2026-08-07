@@ -1,0 +1,288 @@
+/* Generic daily card macro — agent-agnostic visual block */
+
+/* ---- host block (hide Logseq chrome for pure {{card}} blocks) ---- */
+
+.ls-block.is-daily-card {
+  /* Pull card out of the bullet column so it reads as a panel */
+  margin: 0.45rem 0 0.65rem;
+}
+
+.ls-block.is-daily-card > .block-main-container {
+  /* Keep fold control space minimal; hide the bullet itself */
+  align-items: stretch;
+}
+
+.ls-block.is-daily-card > .block-main-container > .block-control-wrap {
+  /* Collapse bullet column; keep a thin hit area for collapse caret if needed */
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ls-block.is-daily-card .block-content {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Fallback if class is missing but card is present (e.g. mid-edit) */
+.ls-block:has(.daily-card) > .block-main-container > .block-control-wrap .bullet-container,
+.ls-block:has(.daily-card) > .block-main-container > .block-control-wrap .bullet-link-wrap {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.daily-card {
+  --daily-card-accent: var(--ls-secondary-text-color);
+  --daily-card-bg: var(--ls-secondary-background-color);
+  --daily-card-border: var(--ls-border-color);
+
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 52rem;
+  margin: 0;
+  border: 1px solid var(--daily-card-border);
+  border-radius: 10px;
+  background: var(--daily-card-bg);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.ls-block.is-daily-card .daily-card {
+  max-width: none; /* use full content width when hosted as a block */
+}
+
+.daily-card__accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--daily-card-accent);
+}
+
+.daily-card__inner {
+  padding: 0.7rem 1rem 0.75rem 1.05rem;
+}
+
+.daily-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.daily-card__title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.daily-card__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--daily-card-accent);
+  opacity: 0.95;
+}
+
+.daily-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 650;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  color: var(--ls-primary-text-color);
+}
+
+.daily-card__metric {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-size: 1.2rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--daily-card-accent);
+  letter-spacing: -0.02em;
+}
+
+.daily-card__subtitle {
+  margin-left: 1.5rem;
+  font-size: 0.8rem;
+  opacity: 0.65;
+  line-height: 1.35;
+}
+
+.daily-card__body {
+  margin-top: 0.4rem;
+  margin-left: 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ls-primary-text-color);
+  opacity: 0.92;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- chips (body split by · or |, or chips= prop) ---- */
+
+.daily-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+  margin-left: 1.5rem;
+}
+
+.daily-card__chip {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
+  max-width: 100%;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--daily-card-accent) 28%, var(--daily-card-border));
+  background: color-mix(in srgb, var(--daily-card-accent) 10%, transparent);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--ls-primary-text-color);
+}
+
+.daily-card__chip-label {
+  opacity: 0.78;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+.daily-card__chip-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--daily-card-accent);
+  letter-spacing: -0.01em;
+}
+
+.daily-card--layout-compact .daily-card__chips {
+  margin-top: 0.3rem;
+  margin-left: 1.35rem;
+  gap: 0.3rem;
+}
+
+.daily-card--layout-compact .daily-card__chip {
+  padding: 0.12rem 0.45rem;
+  font-size: 0.74rem;
+}
+
+.daily-card--layout-wide .daily-card__chips {
+  margin-left: 1.6rem;
+  gap: 0.5rem;
+}
+
+.daily-card--layout-wide .daily-card__chip {
+  padding: 0.28rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+/* ---- tones ---- */
+
+.daily-card--tone-ok {
+  --daily-card-accent: #16a34a;
+}
+
+.daily-card--tone-watch {
+  --daily-card-accent: #d97706;
+}
+
+.daily-card--tone-alert {
+  --daily-card-accent: #dc2626;
+}
+
+.daily-card--tone-info {
+  --daily-card-accent: #2563eb;
+}
+
+.daily-card--tone-neutral {
+  /* Cool slate: intentional, not “empty / incomplete” */
+  --daily-card-accent: #64748b;
+  --daily-card-bg: color-mix(in srgb, var(--ls-secondary-background-color) 88%, #64748b 12%);
+}
+
+html.dark .daily-card--tone-ok,
+.dark-theme .daily-card--tone-ok {
+  --daily-card-accent: #4ade80;
+}
+
+html.dark .daily-card--tone-watch,
+.dark-theme .daily-card--tone-watch {
+  --daily-card-accent: #fbbf24;
+}
+
+html.dark .daily-card--tone-alert,
+.dark-theme .daily-card--tone-alert {
+  --daily-card-accent: #f87171;
+}
+
+html.dark .daily-card--tone-info,
+.dark-theme .daily-card--tone-info {
+  --daily-card-accent: #60a5fa;
+}
+
+html.dark .daily-card--tone-neutral,
+.dark-theme .daily-card--tone-neutral {
+  --daily-card-accent: #94a3b8;
+  --daily-card-bg: color-mix(in srgb, var(--ls-secondary-background-color) 90%, #94a3b8 10%);
+}
+
+/* ---- layouts ---- */
+
+.daily-card--layout-compact .daily-card__inner {
+  padding: 0.45rem 0.8rem 0.45rem 0.95rem;
+}
+
+.daily-card--layout-compact .daily-card__title {
+  font-size: 0.85rem;
+}
+
+.daily-card--layout-compact .daily-card__metric {
+  font-size: 1rem;
+}
+
+.daily-card--layout-compact .daily-card__body {
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+}
+
+.daily-card--layout-wide {
+  max-width: none;
+}
+
+.daily-card--layout-wide .daily-card__inner {
+  padding: 0.9rem 1.15rem 0.95rem 1.25rem;
+}
+
+.daily-card--layout-wide .daily-card__title {
+  font-size: 1.05rem;
+}
+
+.daily-card--layout-wide .daily-card__metric {
+  font-size: 1.4rem;
+}
+
+/* Soft surface lift on hover (read-only, no action implied) */
+.daily-card:hover {
+  border-color: color-mix(in srgb, var(--daily-card-accent) 40%, var(--daily-card-border));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Stack of consecutive cards: tighter rhythm, no double gaps */
+.ls-block.is-daily-card + .ls-block.is-daily-card {
+  margin-top: 0.35rem;
+}
