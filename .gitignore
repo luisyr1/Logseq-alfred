@@ -63,3 +63,7 @@ deps/shui/.lsp
 deps/shui/.lsp-cache
 deps/shui/.clj-kondo
 deps/shui/shui-graph/logseq/bak
+
+# Local agent tooling state (contains absolute paths from the dev machine)
+.claude-flow/
+.claude/settings.local.json
