@@ -1,6 +1,16 @@
 const path = require('path')
 const fs = require('fs')
 
+// Signing and notarization are optional for personal/test builds. They are only
+// enabled when our own Apple credentials are explicitly provided by CI.
+const macSigningIdentity = process.env.APPLE_SIGN_IDENTITY
+const canSignMac = Boolean(
+  macSigningIdentity &&
+  process.env.APPLE_ID &&
+  process.env.APPLE_ID_PASSWORD &&
+  process.env.APPLE_TEAM_ID
+)
+
 module.exports = {
   packagerConfig: {
     name: 'Logseq-OG',
@@ -14,19 +24,21 @@ module.exports = {
         "schemes": "logseq-og"
       }
     ],
-    osxSign: {
-      identity: 'Developer ID Application: Logseq Inc. (K378MFWK59)',
-      'hardened-runtime': true,
-      entitlements: 'entitlements.plist',
-      'entitlements-inherit': 'entitlements.plist',
-      'signature-flags': 'library'
-    },
-    osxNotarize: {
-      tool: 'notarytool',
-      appleId: process.env['APPLE_ID'],
-      appleIdPassword: process.env['APPLE_ID_PASSWORD'],
-      teamId: process.env['APPLE_TEAM_ID']
-    },
+    ...(canSignMac ? {
+      osxSign: {
+        identity: macSigningIdentity,
+        'hardened-runtime': true,
+        entitlements: 'entitlements.plist',
+        'entitlements-inherit': 'entitlements.plist',
+        'signature-flags': 'library'
+      },
+      osxNotarize: {
+        tool: 'notarytool',
+        appleId: process.env.APPLE_ID,
+        appleIdPassword: process.env.APPLE_ID_PASSWORD,
+        teamId: process.env.APPLE_TEAM_ID
+      }
+    } : {}),
   },
   makers: [
     {
