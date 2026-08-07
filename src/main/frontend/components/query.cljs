@@ -14,6 +14,7 @@
             [frontend.extensions.sci :as sci]
             [frontend.handler.editor :as editor-handler]
             [frontend.handler.editor.property :as editor-property]
+            [frontend.storage :as storage]
             [logseq.graph-parser.util :as gp-util]))
 
 (defn built-in-custom-query?
@@ -168,6 +169,7 @@
         full-text-search? (and dsl-query?
                                (util/electron?)
                                (symbol? (gp-util/safe-read-string query)))
+        builder-visible? (boolean (state/sub :ui/show-live-query-builder?))
         result (when (or built-in-collapsed? (not collapsed?'))
                  (query-result/get-query-result config q *query-error current-block-uuid {:table? table?}))
         query-time (:query-time (meta result))
@@ -190,9 +192,20 @@
          (when-not built-in?
            [:div.th
             (if dsl-query?
-              [:div.flex.flex-1.flex-row
+              [:button.alfred-live-query-toggle.flex.flex-1.flex-row.items-center
+               {:type "button"
+                :title (if builder-visible?
+                         "Ocultar filtros de la consulta"
+                         "Mostrar filtros de la consulta")
+                :aria-expanded (str builder-visible?)
+                :on-click (fn []
+                            (let [next-value (not builder-visible?)]
+                              (state/set-state! :ui/show-live-query-builder? next-value)
+                              (storage/set :ui/show-live-query-builder? next-value)))}
                (ui/icon "search" {:size 14})
-               [:div.ml-1 (str "Live query" (when dsl-page-query? " for pages"))]]
+               [:span.ml-1 (str "Live query" (when dsl-page-query? " for pages"))]
+               (ui/icon (if builder-visible? "chevron-up" "chevron-down")
+                        {:size 14 :class "ml-1 alfred-live-query-chevron"})]
               [:div {:style {:font-size "initial"}} title])
 
             (when (or (not dsl-query?) (not collapsed?'))
@@ -232,7 +245,8 @@
                                                                      (util/stop e)
                                                                      (query-result/trigger-custom-query! config q *query-error))}))]])])
 
-         (when dsl-query? builder)
+         (when (and dsl-query? builder-visible?)
+           [:div.alfred-live-query-builder builder])
 
          (if built-in?
            [:div {:style {:margin-left 2}}

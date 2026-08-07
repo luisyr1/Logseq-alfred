@@ -120,6 +120,107 @@
   }
 }
 
+.alfred-whats-new {
+  width: min(34rem, calc(100vw - 3rem));
+  padding: .5rem;
+
+  &__header {
+    padding: 1.1rem 1.25rem 1.35rem;
+    border-left: 3px solid var(--ls-link-text-color);
+
+    h1 {
+      margin: .9rem 0 .45rem;
+      font-size: 1.8rem;
+      line-height: 1.08;
+      letter-spacing: -.025em;
+      color: var(--ls-primary-text-color);
+    }
+
+    p {
+      max-width: 30rem;
+      margin: 0;
+      line-height: 1.55;
+      color: var(--ls-secondary-text-color);
+    }
+  }
+
+  &__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .68rem;
+    font-weight: 650;
+    letter-spacing: .14em;
+    color: var(--ls-secondary-text-color);
+  }
+
+  &__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 50%;
+    color: var(--ls-primary-background-color);
+    background: var(--ls-link-text-color);
+    font-size: .72rem;
+    letter-spacing: 0;
+  }
+
+  &__version {
+    margin-left: auto;
+    padding: .25rem .45rem;
+    border: 1px solid var(--ls-border-color);
+    border-radius: 999px;
+    letter-spacing: .06em;
+  }
+
+  &__changes {
+    display: grid;
+    gap: .5rem;
+    margin: .75rem 0;
+
+    article {
+      display: grid;
+      grid-template-columns: 2.3rem 1fr;
+      gap: .75rem;
+      padding: .9rem 1rem;
+      border-radius: var(--ls-border-radius-medium);
+      background: var(--ls-secondary-background-color);
+    }
+
+    h2 {
+      margin: 0 0 .2rem;
+      font-size: .95rem;
+      color: var(--ls-primary-text-color);
+    }
+
+    p {
+      margin: 0;
+      font-size: .82rem;
+      line-height: 1.5;
+      color: var(--ls-secondary-text-color);
+    }
+  }
+
+  &__number {
+    padding-top: .1rem;
+    font-size: .68rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .08em;
+    color: var(--ls-link-text-color);
+  }
+
+  footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .75rem 1rem 0;
+    font-size: .72rem;
+    color: var(--ls-secondary-text-color);
+  }
+}
+
 .is-electron.is-mac .cp__header {
   > .l {
     padding-left: 78px;

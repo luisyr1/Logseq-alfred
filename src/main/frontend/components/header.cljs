@@ -17,6 +17,7 @@
             [frontend.handler.web.nfs :as nfs]
             [frontend.mobile.util :as mobile-util]
             [frontend.state :as state]
+            [frontend.storage :as storage]
             [frontend.ui :as ui]
             [frontend.util :as util]
             [frontend.version :refer [version]]
@@ -79,6 +80,57 @@
          "platform="
          (js/encodeURIComponent platform))))
 
+(rum/defc alfred-whats-new-panel
+  [close-fn]
+  [:section.alfred-whats-new
+   [:header.alfred-whats-new__header
+    [:div.alfred-whats-new__eyebrow
+     [:span.alfred-whats-new__mark "A"]
+     [:span "ALFRED BUILD"]
+     [:span.alfred-whats-new__version (str "v" version)]]
+    [:h1 "Tu Logseq, un poco más tuyo."]
+    [:p "Esta versión estrena una forma más limpia de trabajar y te contará qué cambia después de cada actualización."]]
+   [:div.alfred-whats-new__changes
+    [:article
+     [:span.alfred-whats-new__number "01"]
+     [:div
+      [:h2 "Queries más limpias"]
+      [:p "Los filtros técnicos quedan plegados. Pulsa “Live query” para mostrarlos, editarlos o volver a ocultarlos."]]]
+    [:article
+     [:span.alfred-whats-new__number "02"]
+     [:div
+      [:h2 "Actualizaciones con contexto"]
+      [:p "Después de actualizar verás esta nota una sola vez. Puedes recuperarla desde el menú de la esquina superior derecha."]]]]
+   [:footer
+    [:span "Markdown sigue siendo la fuente de verdad."]
+    (ui/button "Empezar"
+               :class "ui__modal-enter"
+               :on-click close-fn)]])
+
+(defn open-alfred-whats-new!
+  []
+  (state/set-modal! alfred-whats-new-panel
+                    {:id "alfred-whats-new"
+                     :close-btn? true
+                     :close-backdrop? true
+                     :center? true}))
+
+(rum/defc alfred-whats-new-launcher
+  []
+  (let [_ (rum/use-effect!
+           (fn []
+             (let [timer (js/setTimeout
+                          (fn []
+                            (when (and (util/electron?)
+                                       (not (state/modal-opened?))
+                                       (not= version (storage/get :alfred/whats-new-version)))
+                              (storage/set :alfred/whats-new-version version)
+                              (open-alfred-whats-new!)))
+                          1400)]
+               #(js/clearTimeout timer)))
+           [version])]
+    nil))
+
 (rum/defc dropdown-menu < rum/reactive
   < {:key-fn #(identity "repos-dropdown-menu")}
   [{:keys [current-repo t]}]
@@ -97,6 +149,11 @@
          {:title (t :settings)
           :options {:on-click state/open-settings!}
           :icon (ui/icon "settings")})
+
+       (when (util/electron?)
+         {:title (str "Novedades de Alfred · " version)
+          :options {:on-click open-alfred-whats-new!}
+          :icon (ui/icon "sparkles")})
 
        (when config/lsp-enabled?
          {:title (t :plugins)
@@ -220,6 +277,7 @@
                              (mobile-util/native-platform?)
                              (util/scroll-to-top true))))
       :style           {:fontSize 50}}
+     (alfred-whats-new-launcher)
      [:div.l.flex.drag-region
       [left-menu
        (if (mobile-util/native-platform?)

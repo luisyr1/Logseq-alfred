@@ -8,10 +8,8 @@ on:
     paths:
       - .github/workflows/build-alfred-macos.yml
       - resources/forge.config.js
-      - src/electron/electron/core.cljs
-      - src/electron/electron/updater.cljs
-      - src/main/frontend/components/settings.cljs
-      - src/main/frontend/handler.cljs
+      - src/electron/**
+      - src/main/frontend/**
 
 permissions:
   contents: write
@@ -85,13 +83,6 @@ jobs:
           cp static/out/make/*.dmg "builds/Logseq-OG-Apple-Silicon-${BUILD_VERSION}.dmg"
           cp static/out/make/zip/darwin/arm64/*.zip "builds/Logseq-OG-Apple-Silicon-${BUILD_VERSION}.zip"
 
-      - name: Keep build as workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Logseq-OG-Apple-Silicon-${{ env.BUILD_VERSION }}
-          path: builds/*
-          retention-days: 14
-
       - name: Publish downloadable test release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -100,4 +91,4 @@ jobs:
             builds/* \
             --target "${GITHUB_SHA}" \
             --title "Logseq Alfred ${BUILD_VERSION}" \
-            --notes "Versión personal para macOS Apple Silicon. Incluye actualización desde la propia aplicación. Sin firma ni notarización de Apple."
+            --notes "Versión personal para macOS Apple Silicon. Estrena la ventana Qué hay de nuevo y permite plegar el constructor visual de las live queries. Incluye actualización desde la propia aplicación. Sin firma ni notarización de Apple."

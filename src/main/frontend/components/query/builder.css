@@ -65,3 +65,34 @@
        }
     }
 }
+
+.alfred-live-query-toggle {
+    width: fit-content;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover .alfred-live-query-chevron,
+    &:focus-visible .alfred-live-query-chevron {
+        opacity: 1;
+    }
+
+    &:focus-visible {
+        outline: 1px solid var(--ls-link-text-color);
+        outline-offset: 3px;
+        border-radius: 3px;
+    }
+}
+
+.alfred-live-query-chevron {
+    opacity: .45;
+    transition: opacity .15s ease;
+}
+
+.alfred-live-query-builder {
+    margin: .15rem 0 .5rem;
+    padding: .5rem .625rem;
+    border-left: 2px solid var(--ls-link-text-color);
+    border-radius: 0 var(--ls-border-radius-low) var(--ls-border-radius-low) 0;
+    background: var(--ls-secondary-background-color);
+}
