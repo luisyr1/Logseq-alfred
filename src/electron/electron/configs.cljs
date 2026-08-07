@@ -3,10 +3,16 @@
             ["fs-extra" :as ^js fs]
             ["path" :as ^js node-path]
             [cljs.reader :as reader]
-            [electron.logger :as logger]))
+            [electron.logger :as logger]
+            [goog.object :as gobj]))
 
 ;; FIXME: move configs.edn to where it should be
-(defonce dot-dir-name ".logseq-og")
+(defonce preview-user-data (gobj/get (.-env js/process) "LOGSEQ_ALFRED_PREVIEW_DATA"))
+(when (seq preview-user-data)
+  (.ensureDirSync fs preview-user-data)
+  (.setPath app "userData" preview-user-data))
+
+(defonce dot-dir-name (if (seq preview-user-data) ".logseq-og-preview" ".logseq-og"))
 (defonce dot-root (.join node-path (.getPath app "home") dot-dir-name))
 (defonce cfg-root (.getPath app "userData"))
 (defonce cfg-path (.join node-path cfg-root "configs.edn"))

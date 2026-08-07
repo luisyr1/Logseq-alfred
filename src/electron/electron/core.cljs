@@ -11,6 +11,7 @@
             [clojure.string :as string]
             [promesa.core :as p]
             [cljs-bean.core :as bean]
+            [goog.object :as gobj]
             [electron.configs :as cfgs]
             [electron.fs-watcher :as fs-watcher]
             ["path" :as node-path]
@@ -35,13 +36,14 @@
 (defonce *setup-fn (volatile! nil))
 (defonce *teardown-fn (volatile! nil))
 (defonce *quit-dirty? (volatile! true))
+(defonce preview? (= "1" (gobj/get (.-env js/process) "LOGSEQ_ALFRED_PREVIEW")))
 
 ;; Handle creating/removing shortcuts on Windows when installing/uninstalling.
 (when (js/require "electron-squirrel-startup") (.quit app))
 
 (defn setup-updater! [^js win]
   ;; Personal updater for the Logseq Alfred fork.
-  (when-not linux?
+  (when-not (or linux? preview?)
     (init-updater {:repo   "luisyr1/Logseq-alfred"
                    :win    win})))
 
@@ -60,7 +62,8 @@
       (logseq-url-handler win parsed-url))))
 
 (defn setup-interceptor! [^js app]
-  (.setAsDefaultProtocolClient app LSP_SCHEME)
+  (when-not preview?
+    (.setAsDefaultProtocolClient app LSP_SCHEME))
 
   (.registerFileProtocol
    protocol FILE_ASSETS_SCHEME
@@ -241,7 +244,7 @@
                (open-url-handler win url))))))
 
 (defn main []
-  (if-not (.requestSingleInstanceLock app)
+  (if-not (or preview? (.requestSingleInstanceLock app))
     (do
       (search/close!)
       (.quit app))
@@ -261,12 +264,14 @@
                                           :supportFetchAPI false}}]))
 
       (set-app-menu!)
-      (setup-deeplink!)
+      (when-not preview?
+        (setup-deeplink!))
 
-      (.on app "second-instance"
-           (fn [_event _commandLine _workingDirectory]
-             (when-let [window @*win]
-               (win/switch-to-window! window))))
+      (when-not preview?
+        (.on app "second-instance"
+             (fn [_event _commandLine _workingDirectory]
+               (when-let [window @*win]
+                 (win/switch-to-window! window)))))
 
       (.on app "window-all-closed" (fn []
                                      (logger/debug "window-all-closed" "Quitting...")
@@ -318,7 +323,7 @@
                                           window @*win
                                           multiple-windows? (> (count windows) 1)]
                                       (cond
-                                        (or multiple-windows? (not mac?) @win/*quitting?)
+                                        (or preview? multiple-windows? (not mac?) @win/*quitting?)
                                         (when window
                                           (win/close-handler win handler/close-watcher-when-orphaned! e)
                                           (reset! *win nil))
