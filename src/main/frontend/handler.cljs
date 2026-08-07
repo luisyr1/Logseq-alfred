@@ -252,4 +252,4 @@
   []
   (p/let [_ (el/persist-dbs!)
           _ (ipc/invoke "set-quit-dirty-state" false)]
-    (ipc/ipc :quitAndInstall)))
+    (js/window.apis.installUpdatesAndQuitApp)))

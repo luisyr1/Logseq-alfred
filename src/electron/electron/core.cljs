@@ -40,9 +40,9 @@
 (when (js/require "electron-squirrel-startup") (.quit app))
 
 (defn setup-updater! [^js win]
-  ;; manual/auto updater
+  ;; Personal updater for the Logseq Alfred fork.
   (when-not linux?
-    (init-updater {:repo   "logseq/logseq"
+    (init-updater {:repo   "luisyr1/Logseq-alfred"
                    :win    win})))
 
 (defn open-url-handler

@@ -8,6 +8,10 @@ on:
     paths:
       - .github/workflows/build-alfred-macos.yml
       - resources/forge.config.js
+      - src/electron/electron/core.cljs
+      - src/electron/electron/updater.cljs
+      - src/main/frontend/components/settings.cljs
+      - src/main/frontend/handler.cljs
 
 permissions:
   contents: write
@@ -48,8 +52,20 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Set unique Alfred version
+        run: |
+          export BUILD_VERSION="1.0.${GITHUB_RUN_NUMBER}"
+          echo "BUILD_VERSION=${BUILD_VERSION}" >> "$GITHUB_ENV"
+          node -e "const fs=require('fs'); const p='src/main/frontend/version.cljs'; const s=fs.readFileSync(p,'utf8'); fs.writeFileSync(p,s.replace(/\(defonce version \"[^\"]+\"\)/, '(defonce version \"' + process.env.BUILD_VERSION + '\")'))"
+
       - name: Compile Logseq
         run: yarn install && yarn gulp:build && yarn cljs:release-electron
+
+      - name: Apply version to desktop package
+        working-directory: static
+        run: |
+          npm pkg set version="${BUILD_VERSION}"
+          echo "${BUILD_VERSION}" > VERSION
 
       - name: Prepare desktop dependencies for Apple Silicon
         working-directory: static
@@ -63,25 +79,25 @@ jobs:
         working-directory: static
         run: yarn electron:make-macos-arm64
 
-      - name: Collect DMG
+      - name: Collect installers
         run: |
           mkdir -p builds
-          cp static/out/make/*.dmg "builds/Logseq-OG-Apple-Silicon-build-${GITHUB_RUN_NUMBER}.dmg"
+          cp static/out/make/*.dmg "builds/Logseq-OG-Apple-Silicon-${BUILD_VERSION}.dmg"
+          cp static/out/make/zip/darwin/arm64/*.zip "builds/Logseq-OG-Apple-Silicon-${BUILD_VERSION}.zip"
 
       - name: Keep build as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Logseq-OG-Apple-Silicon-build-${{ github.run_number }}
-          path: builds/*.dmg
+          name: Logseq-OG-Apple-Silicon-${{ env.BUILD_VERSION }}
+          path: builds/*
           retention-days: 14
 
       - name: Publish downloadable test release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "alfred-build-${GITHUB_RUN_NUMBER}" \
-            builds/*.dmg \
+          gh release create "v${BUILD_VERSION}" \
+            builds/* \
             --target "${GITHUB_SHA}" \
-            --title "Logseq Alfred build ${GITHUB_RUN_NUMBER}" \
-            --notes "Compilación personal de prueba para macOS Apple Silicon. Sin firma ni notarización de Apple." \
-            --prerelease
+            --title "Logseq Alfred ${BUILD_VERSION}" \
+            --notes "Versión personal para macOS Apple Silicon. Incluye actualización desde la propia aplicación. Sin firma ni notarización de Apple."

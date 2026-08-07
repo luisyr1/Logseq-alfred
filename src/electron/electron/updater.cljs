@@ -1,16 +1,17 @@
 (ns electron.updater
-  (:require [electron.utils :refer [mac? win32? prod? open fetch *win]]
+  (:require [electron.utils :refer [mac? fetch]]
             [electron.logger :as logger]
             [frontend.version :refer [version]]
             [clojure.string :as string]
             [promesa.core :as p]
             [cljs-bean.core :as bean]
-            [electron.configs :as cfgs]
             ["semver" :as semver]
+            ["child_process" :as child-process]
+            ["crypto" :as crypto]
             ["os" :as os]
             ["fs" :as fs]
             ["path" :as node-path]
-            ["electron" :refer [ipcMain app autoUpdater]]))
+            ["electron" :refer [ipcMain app]]))
 
 (def *update-ready-to-install (atom nil))
 (def *update-pending (atom nil))
@@ -31,15 +32,30 @@
 
 (defn get-latest-artifact-info
   [repo]
-  (let [endpoint (str "https://update.electronjs.org/" repo "/" js/process.platform "-" js/process.arch "/" electron-version)]
+  (let [endpoint (str "https://api.github.com/repos/" repo "/releases/latest")]
     (debug "checking" endpoint)
     (p/catch
-     (p/let [res (fetch endpoint)
+     (p/let [res (fetch endpoint {:headers {"Accept" "application/vnd.github+json"
+                                             "User-Agent" "Logseq-Alfred-Updater"}
+                                  :timeout (* 1000 10)})
              status (.-status res)
-             text (.text res)]
+             text (when-not (.-ok res) (.text res))
+             release-json (when (.-ok res) (.json res))]
        (if (.-ok res)
-         (let [info (when-not (string/blank? text) (js/JSON.parse text))]
-           (bean/->clj info))
+         (let [release (bean/->clj release-json)
+               remote-version (some-> (:tag_name release)
+                                      (re-find #"\d+\.\d+\.\d+"))
+               asset (first (filter #(and (string/includes? (:name %) "Apple-Silicon")
+                                          (string/ends-with? (:name %) ".zip"))
+                                    (:assets release)))]
+           (when-not (and remote-version asset)
+             (throw (js/Error. "The latest Alfred release has no Apple Silicon ZIP")))
+           {:name (or (:name release) (:tag_name release))
+            :notes (:body release)
+            :version remote-version
+            :url (:browser_download_url asset)
+            :digest (:digest asset)
+            :size (:size asset)})
          (throw (js/Error. (str "[" status "] " text)))))
      (fn [e]
        (logger/warn "[update server error]" e)
@@ -58,7 +74,7 @@
        (-> (p/let
             [artifact (get-latest-artifact-info repo)
 
-             artifact (when-let [remote-version (and artifact (re-find #"\d+\.\d+\.\d+" (:url artifact)))]
+             artifact (when-let [remote-version (:version artifact)]
                         (when (and (. semver valid remote-version)
                                    (. semver lt electron-version remote-version)) artifact))
 
@@ -71,19 +87,26 @@
              dest-info (p/create
                         (fn [resolve1 reject1]
                           (let [headers (. dl-res -headers)
-                                total-size (js/parseInt (.get headers "content-length"))
+                                total-size (or (some-> (.get headers "content-length") js/parseInt)
+                                               (:size artifact)
+                                               0)
                                 body (.-body dl-res)
                                 start-at (.now js/Date)
                                 *downloaded (atom 0)
+                                digest (.createHash crypto "sha256")
+                                expected-digest (:digest artifact)
                                 dest-basename (node-path/basename url)
                                 tmp-dest-file (node-path/join (os/tmpdir) (str dest-basename ".pending"))
                                 dest-file (.createWriteStream fs tmp-dest-file)]
                             (doto body
                               (.on "data" (fn [chunk]
                                             (let [downloaded (+ @*downloaded (.-length chunk))
-                                                  percent (.toFixed (/ (* 100 downloaded) total-size) 2)
+                                                  percent (if (pos? total-size)
+                                                            (.toFixed (/ (* 100 downloaded) total-size) 2)
+                                                            "0.00")
                                                   elapsed (/ (- (js/Date.now) start-at) 1000)]
                                               (.write dest-file chunk)
+                                              (.update digest chunk)
                                               (emit "download-progress" {:total      total-size
                                                                          :downloaded downloaded
                                                                          :percent    percent
@@ -92,12 +115,24 @@
                               (.on "error" (fn [e]
                                              (reject1 e)))
                               (.on "end" (fn [_e]
-                                           (.close dest-file)
-                                           (let [dest-file (string/replace tmp-dest-file ".pending" "")]
-                                             (fs/renameSync tmp-dest-file dest-file)
-                                             (resolve1 (merge artifact {:dest-file dest-file})))))))))]
+                                           (.end dest-file
+                                                 (fn []
+                                                   (let [actual-digest (str "sha256:" (.digest digest "hex"))
+                                                         dest-file (string/replace tmp-dest-file ".pending" "")]
+                                                     (if (and expected-digest
+                                                              (not= expected-digest actual-digest))
+                                                       (do
+                                                         (fs/unlinkSync tmp-dest-file)
+                                                         (reject1 (js/Error. "Downloaded update checksum mismatch")))
+                                                       (do
+                                                         (when (fs/existsSync dest-file)
+                                                           (fs/unlinkSync dest-file))
+                                                         (fs/renameSync tmp-dest-file dest-file)
+                                                         (resolve1 (merge artifact {:dest-file dest-file})))))))))))))]
              (reset! *update-ready-to-install dest-info)
              (emit "update-downloaded" dest-info)
+             (.. win -webContents
+                 (send "auto-updater-downloaded" (bean/->js dest-info)))
              (resolve nil))
            (p/catch
             (fn [e]
@@ -110,37 +145,64 @@
              (fn []
                (emit "completed" nil))))))))
 
-(defn- new-version-downloaded-cb
-  [_ notes name date url]
-  (logger/info "[update-downloaded]" name notes date url)
-  (when-let [web-contents (and @*win (. ^js @*win -webContents))]
-    (.send web-contents "auto-updater-downloaded"
-           (bean/->js {:notes notes :name name :date date :url url}))))
+(defn- current-app-bundle
+  []
+  (-> js/process.execPath
+      node-path/dirname
+      node-path/dirname
+      node-path/dirname))
 
-(defn init-auto-updater
-  [repo]
-  (when (.valid semver electron-version)
-    (p/let [info (get-latest-artifact-info repo)]
-      (when-let [remote-version (and info (re-find #"\d+\.\d+\.\d+" (:url info)))]
-        (if (and (. semver valid remote-version)
-                 (. semver lt electron-version remote-version))
+(defn- extract-update!
+  [zip-file]
+  (when-not mac?
+    (throw (js/Error. "Personal updates are currently supported only on macOS")))
+  (let [staging-dir (fs/mkdtempSync (node-path/join (os/tmpdir) "logseq-alfred-update-"))
+        result (child-process/spawnSync "/usr/bin/ditto" #js ["-x" "-k" zip-file staging-dir])
+        app-name (first (filter #(string/ends-with? % ".app")
+                                (js->clj (fs/readdirSync staging-dir))))]
+    (when-not (zero? (.-status result))
+      (throw (js/Error. "The downloaded update could not be extracted")))
+    (when-not app-name
+      (throw (js/Error. "The downloaded update contains no macOS application")))
+    (node-path/join staging-dir app-name)))
 
-           ;; start auto updater
-          (when (<= (second (string/split remote-version ".")) 10) ; file version should be locked at 0.10.*
-            (debug "Found remote version" remote-version)
-            (when (or mac? win32?)
-              (debug "forward update to autoUpdater")
-              ;; FIXME: It seems that update-electron-app doesn't work on linux
-              (when-let [f (js/require "update-electron-app")]
-                (f #js{:notifyUser false})
-                (.once autoUpdater "update-downloaded"
-                       new-version-downloaded-cb))))
+(def update-helper-script
+  "pid=\"$1\"
+source_app=\"$2\"
+target_app=\"$3\"
+backup_app=\"${target_app}.previous\"
+while /bin/kill -0 \"$pid\" 2>/dev/null; do /bin/sleep 0.2; done
+/bin/rm -rf \"$backup_app\"
+if /bin/mv \"$target_app\" \"$backup_app\" && /usr/bin/ditto \"$source_app\" \"$target_app\"; then
+  /usr/bin/xattr -dr com.apple.quarantine \"$target_app\" 2>/dev/null || true
+  /usr/bin/open \"$target_app\"
+else
+  /bin/rm -rf \"$target_app\"
+  if [ -d \"$backup_app\" ]; then /bin/mv \"$backup_app\" \"$target_app\"; fi
+  /usr/bin/open \"$target_app\"
+fi")
 
-          (debug "Skip remote version [ahead of pre-release]" remote-version))))))
+(defn- install-personal-update!
+  [zip-file]
+  (let [target-app (current-app-bundle)
+        target-parent (node-path/dirname target-app)]
+    (when-not (string/ends-with? target-app ".app")
+      (throw (js/Error. "Logseq Alfred is not running from an application bundle")))
+    (when (string/starts-with? target-app "/Volumes/")
+      (throw (js/Error. "Move Logseq Alfred to Applications before updating")))
+    (fs/accessSync target-parent (.-W_OK (.-constants fs)))
+    (let [staged-app (extract-update! zip-file)
+          helper (child-process/spawn "/bin/sh"
+                                      #js ["-c" update-helper-script
+                                           "logseq-alfred-updater"
+                                           (str js/process.pid)
+                                           staged-app
+                                           target-app]
+                                      #js {:detached true :stdio "ignore"})]
+      (.unref helper))))
 
 (defn init-updater
   [{:keys [repo ^js _win] :as opts}]
-  (and prod? (not= false (cfgs/get-item :auto-update)) (init-auto-updater repo))
   (let [check-channel "check-for-updates"
         install-channel "install-updates"
         check-listener (fn [_e & args]
@@ -151,8 +213,8 @@
                              #(reset! *update-pending nil))))
         install-listener (fn [_e quit-app?]
                            (when-let [dest-file (:dest-file @*update-ready-to-install)]
-                             (open dest-file)
-                             (and quit-app? (js/setTimeout #(.quit app) 1000))))]
+                             (install-personal-update! dest-file)
+                             (and quit-app? (js/setTimeout #(.quit app) 500))))]
     (.handle ipcMain check-channel check-listener)
     (.handle ipcMain install-channel install-listener)
     #(do

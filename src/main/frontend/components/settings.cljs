@@ -14,6 +14,7 @@
             [frontend.db :as db]
             [frontend.dicts :as dicts]
             [frontend.handler.config :as config-handler]
+            [frontend.handler :as handler]
             [frontend.handler.file-sync :as file-sync-handler]
             [frontend.handler.global-config :as global-config-handler]
             [frontend.handler.notification :as notification]
@@ -75,7 +76,7 @@
                 (if update-pending? (t :settings-page/checking) (t :settings-page/check-for-updates))
                 :class "text-sm mr-1"
                 :disabled update-pending?
-                :on-click #(js/window.apis.checkForUpdates false))
+                :on-click #(js/window.apis.checkForUpdates true))
 
                :else
                nil)]
@@ -113,14 +114,26 @@
                  (util/stop e))}
               svg/external-link name " 🎉"]])
 
+          "download-progress"
+          (let [{:keys [percent]} payload]
+            [:p (str "Descargando actualización… " percent "%")])
+
+          "update-downloaded"
+          [:p (t :updater/new-version-install)
+           [:a.link.ml-2
+            {:on-click #(handler/quit-and-install-new-version!)}
+            (t :updater/quit-and-install)]]
+
           "error"
           [:p (t :settings-page/update-error-1) [:br] (t :settings-page/update-error-2)
            [:a.link
             {:on-click
              (fn [e]
-               (js/window.apis.openExternal "https://github.com/logseq/og/releases")
+               (js/window.apis.openExternal "https://github.com/luisyr1/Logseq-alfred/releases")
                (util/stop e))}
-            svg/external-link " release channel"]])])]))
+            svg/external-link " release channel"]]
+
+          nil)])]))
 
 (rum/defc outdenting-hint
   []
