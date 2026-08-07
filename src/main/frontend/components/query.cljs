@@ -14,7 +14,6 @@
             [frontend.extensions.sci :as sci]
             [frontend.handler.editor :as editor-handler]
             [frontend.handler.editor.property :as editor-property]
-            [frontend.storage :as storage]
             [logseq.graph-parser.util :as gp-util]))
 
 (defn built-in-custom-query?
@@ -133,7 +132,23 @@
        [:span.opacity-60.text-sm.ml-2.results-count
         (str result-count (if (> result-count 1) " results" " result"))])]))
 
+(defn- result-count-label
+  [result table?]
+  (let [result-count (cond
+                       (nil? result) 0
+                       (and (not table?) (map? result))
+                       (apply + (map (comp count val) result))
+                       :else (count result))]
+    [result-count
+     (str result-count (if (= result-count 1) " result" " results"))]))
+
+(defn- stop-edit!
+  "Don't start block edit when interacting with live-query chrome."
+  [e]
+  (util/stop e))
+
 (rum/defcs ^:large-vars/cleanup-todo custom-query* < rum/reactive rum/static db-mixins/query
+  (rum/local false ::filters-visible)
   {:init (fn [state]
            (let [[config {:keys [title collapsed?]}] (:rum/args state)
                  built-in? (built-in-custom-query? title)
@@ -146,6 +161,8 @@
            (assoc state :query-error (atom nil)))}
   [state config {:keys [title builder query view collapsed? table-view?] :as q}]
   (let [*query-error (:query-error state)
+        *filters-visible (::filters-visible state)
+        filters-visible? (rum/react *filters-visible)
         built-in? (built-in-custom-query? title)
         dsl-query? (:dsl-query? config)
         current-block-uuid (or (:block/uuid (:block config))
@@ -169,12 +186,12 @@
         full-text-search? (and dsl-query?
                                (util/electron?)
                                (symbol? (gp-util/safe-read-string query)))
-        builder-visible? (boolean (state/sub :ui/show-live-query-builder?))
         result (when (or built-in-collapsed? (not collapsed?'))
                  (query-result/get-query-result config q *query-error current-block-uuid {:table? table?}))
         query-time (:query-time (meta result))
         page-list? (and (seq result)
                         (some? (:block/name (first result))))
+        [result-n result-label] (result-count-label result table?)
         opts {:query-error-atom *query-error
               :current-block current-block
               :dsl-query? dsl-query?
@@ -182,7 +199,45 @@
               :view-f view-f
               :page-list? page-list?
               :result result
-              :group-by-page? (query-result/get-group-by-page q {:table? table?})}]
+              :group-by-page? (query-result/get-group-by-page q {:table? table?})}
+        toggle-results! (fn [e]
+                          (stop-edit! e)
+                          (if collapsed?'
+                            (editor-handler/expand-block! current-block-uuid)
+                            (editor-handler/collapse-block! current-block-uuid)))
+        toggle-filters! (fn [e]
+                          (stop-edit! e)
+                          (swap! *filters-visible not))
+        query-actions (when (and current-block (not view-f) (nil? table-view?) (not page-list?))
+                        (if table?
+                          [:a.flex.ml-1.fade-link
+                           {:title "Switch to list view"
+                            :on-mouse-down stop-edit!
+                            :on-click (fn [] (editor-property/set-block-property! current-block-uuid
+                                                                                  "query-table"
+                                                                                  false))}
+                           (ui/icon "list" {:style {:font-size 18}})]
+                          [:a.flex.ml-1.fade-link
+                           {:title "Switch to table view"
+                            :on-mouse-down stop-edit!
+                            :on-click (fn [] (editor-property/set-block-property! current-block-uuid
+                                                                                  "query-table"
+                                                                                  true))}
+                           (ui/icon "table" {:style {:font-size 18}})]))
+        settings-action [:a.flex.ml-1.fade-link
+                         {:title "Setting properties"
+                          :on-mouse-down stop-edit!
+                          :on-click (fn []
+                                      (let [all-keys (query-table/get-keys result page-list?)]
+                                        (state/pub-event! [:modal/set-query-properties current-block all-keys])))}
+                         (ui/icon "settings" {:style {:font-size 18}})]
+        refresh-action (when (or full-text-search?
+                                 (and query-time (> query-time 50)))
+                         [:div.ml-1
+                          (query-refresh-button query-time {:full-text-search? full-text-search?
+                                                            :on-mouse-down (fn [e]
+                                                                             (stop-edit! e)
+                                                                             (query-result/trigger-custom-query! config q *query-error))})])]
     (if (:custom-query? config)
       [:code (if dsl-query?
                (util/format "{{query %s}}" query)
@@ -190,63 +245,70 @@
       (when-not (and built-in? (empty? result))
         [:div.custom-query (get config :attr {})
          (when-not built-in?
-           [:div.th
-            (if dsl-query?
-              [:button.alfred-live-query-toggle.flex.flex-1.flex-row.items-center
-               {:type "button"
-                :title (if builder-visible?
-                         "Ocultar filtros de la consulta"
-                         "Mostrar filtros de la consulta")
-                :aria-expanded (str builder-visible?)
-                :on-click (fn []
-                            (let [next-value (not builder-visible?)]
-                              (state/set-state! :ui/show-live-query-builder? next-value)
-                              (storage/set :ui/show-live-query-builder? next-value)))}
-               (ui/icon "search" {:size 14})
-               [:span.ml-1 (str "Live query" (when dsl-page-query? " for pages"))]
-               (ui/icon (if builder-visible? "chevron-up" "chevron-down")
-                        {:size 14 :class "ml-1 alfred-live-query-chevron"})]
-              [:div {:style {:font-size "initial"}} title])
+           (if dsl-query?
+             ;; Single full-width row using Logseq's own Tailwind utilities.
+             [:div.th.alfred-live-query-th.w-full
+              {:on-mouse-down stop-edit!}
+              [:div.flex.flex-row.items-center.justify-between.w-full.gap-2
+               [:a.alfred-live-query-toggle.flex.flex-row.items-center.gap-1.select-none
+                {:title (if collapsed?'
+                          "Mostrar resultados"
+                          "Ocultar resultados")
+                 :on-mouse-down stop-edit!
+                 :on-click toggle-results!}
+                (ui/icon (if collapsed?' "chevron-right" "chevron-down") {:size 14})
+                (ui/icon "search" {:size 14})
+                [:span.font-medium
+                 (str "Live query" (when dsl-page-query? " for pages"))]
+                (when (or (not collapsed?') (pos? result-n))
+                  [:span.opacity-60.ml-1.whitespace-nowrap result-label])]
 
-            (when (or (not dsl-query?) (not collapsed?'))
-              [:div.flex.flex-row.items-center.fade-in
-               (when (> (count result) 0)
-                 [:span.results-count
-                  (let [result-count (if (and (not table?) (map? result))
-                                       (apply + (map (comp count val) result))
-                                       (count result))]
-                    (str result-count (if (> result-count 1) " results" " result")))])
+               [:div.flex.flex-row.items-center.flex-nowrap.shrink-0
+                [:a.alfred-live-query-filters-btn.flex.flex-row.items-center.gap-1.select-none
+                 {:title (if filters-visible?
+                           "Ocultar el constructor visual de filtros"
+                           "Mostrar el constructor visual de filtros (AND / TODO / …)")
+                  :class (when filters-visible? "is-active")
+                  :on-mouse-down stop-edit!
+                  :on-click toggle-filters!}
+                 (ui/icon "filter" {:size 14})
+                 [:span "Filtros"]
+                 (ui/icon (if filters-visible? "chevron-up" "chevron-down") {:size 12})]
 
-               (when (and current-block (not view-f) (nil? table-view?) (not page-list?))
-                 (if table?
-                   [:a.flex.ml-1.fade-link {:title "Switch to list view"
-                                            :on-click (fn [] (editor-property/set-block-property! current-block-uuid
-                                                                                                  "query-table"
-                                                                                                  false))}
-                    (ui/icon "list" {:style {:font-size 20}})]
-                   [:a.flex.ml-1.fade-link {:title "Switch to table view"
-                                            :on-click (fn [] (editor-property/set-block-property! current-block-uuid
-                                                                                                  "query-table"
-                                                                                                  true))}
-                    (ui/icon "table" {:style {:font-size 20}})]))
+                (when-not collapsed?'
+                  [:<>
+                   query-actions
+                   settings-action
+                   refresh-action])]]]
 
-               [:a.flex.ml-1.fade-link
-                {:title "Setting properties"
-                 :on-click (fn []
-                             (let [all-keys (query-table/get-keys result page-list?)]
-                               (state/pub-event! [:modal/set-query-properties current-block all-keys])))}
-                (ui/icon "settings" {:style {:font-size 20}})]
+             [:div.th
+              [:div {:style {:font-size "initial"}} title]
+              (when-not collapsed?'
+                [:div.flex.flex-row.items-center.fade-in
+                 (when (pos? result-n)
+                   [:span.results-count result-label])
+                 query-actions
+                 settings-action
+                 refresh-action])]))
 
-               [:div.ml-1
-                (when (or full-text-search?
-                          (and query-time (> query-time 50)))
-                  (query-refresh-button query-time {:full-text-search? full-text-search?
-                                                    :on-mouse-down (fn [e]
-                                                                     (util/stop e)
-                                                                     (query-result/trigger-custom-query! config q *query-error))}))]])])
+         ;; Visual query builder (original Logseq AND / TODO pills).
+         ;; Shown only when Filtros is open — never falls back to raw {{query}}.
+         (when (and dsl-query? filters-visible?)
+           [:div.alfred-live-query-builder
+            {:on-mouse-down stop-edit!}
+            builder])
 
-         (when (and dsl-query? builder-visible?)
-           [:div.alfred-live-query-builder builder])
+         ;; When filters are collapsed, a one-line preview (click to open builder).
+         (when (and dsl-query?
+                    (not filters-visible?)
+                    (not (string/blank? query)))
+           [:div.alfred-live-query-preview
+            {:title "Clic para mostrar el constructor visual de filtros"
+             :on-mouse-down stop-edit!
+             :on-click toggle-filters!}
+            [:span.opacity-50 (ui/icon "code" {:size 12})]
+            [:code.ml-1 query]
+            [:span.alfred-live-query-preview-hint.ml-2 "mostrar filtros"]])
 
          (if built-in?
            [:div {:style {:margin-left 2}}

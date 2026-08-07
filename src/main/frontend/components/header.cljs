@@ -95,7 +95,7 @@
      [:span.alfred-whats-new__number "01"]
      [:div
       [:h2 "Queries más limpias"]
-      [:p "Los filtros técnicos quedan plegados. Pulsa “Live query” para mostrarlos, editarlos o volver a ocultarlos."]]]
+      [:p "Siempre ves que hay una live query. Con el chevron ocultas u muestras los resultados; con “Filtros” solo la parte AND / TODO / DOING…."]]]
     [:article
      [:span.alfred-whats-new__number "02"]
      [:div

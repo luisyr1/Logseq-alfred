@@ -66,33 +66,100 @@
     }
 }
 
+/* Live query chrome — layout is mostly Tailwind utilities in the component.
+   These rules polish the controls and the visual builder panel. */
+
+.ls-block .custom-query > .th.alfred-live-query-th {
+    display: block;
+    width: 100%;
+    opacity: 1;
+}
+
 .alfred-live-query-toggle {
-    width: fit-content;
     color: inherit;
-    cursor: pointer;
-    text-align: left;
+    text-decoration: none !important;
+    border-radius: 4px;
+    padding: 2px 4px;
+    min-width: 0;
 
-    &:hover .alfred-live-query-chevron,
-    &:focus-visible .alfred-live-query-chevron {
+    &:hover {
+        background: var(--ls-tertiary-background-color, rgba(0, 0, 0, .04));
+        color: inherit;
+    }
+}
+
+.alfred-live-query-filters-btn {
+    color: inherit;
+    text-decoration: none !important;
+    border: 1px solid var(--ls-border-color);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    opacity: .9;
+
+    &:hover,
+    &.is-active {
         opacity: 1;
-    }
-
-    &:focus-visible {
-        outline: 1px solid var(--ls-link-text-color);
-        outline-offset: 3px;
-        border-radius: 3px;
+        border-color: var(--ls-link-text-color);
+        color: var(--ls-link-text-color);
+        background: var(--ls-tertiary-background-color, rgba(0, 0, 0, .03));
     }
 }
 
-.alfred-live-query-chevron {
-    opacity: .45;
-    transition: opacity .15s ease;
-}
-
+/* Original Logseq visual builder (AND / TODO pills), framed when open. */
 .alfred-live-query-builder {
-    margin: .15rem 0 .5rem;
+    margin: .25rem 0 .5rem;
     padding: .5rem .625rem;
     border-left: 2px solid var(--ls-link-text-color);
     border-radius: 0 var(--ls-border-radius-low) var(--ls-border-radius-low) 0;
     background: var(--ls-secondary-background-color);
+
+    .cp__query-builder {
+        margin: 0;
+    }
+}
+
+/* One-line collapsed preview of the raw DSL — click opens the visual builder. */
+.alfred-live-query-preview {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: .25rem;
+    margin: 0 0 .4rem;
+    padding: .2rem .4rem;
+    border-radius: var(--ls-border-radius-low);
+    background: var(--ls-tertiary-background-color, rgba(0, 0, 0, .03));
+    cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+
+    code {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        opacity: .75;
+        background: transparent;
+        padding: 0;
+    }
+
+    .alfred-live-query-preview-hint {
+        flex: 0 0 auto;
+        font-size: 11px;
+        opacity: .45;
+        white-space: nowrap;
+    }
+
+    &:hover {
+        background: var(--ls-selection-background-color, rgba(0, 0, 0, .06));
+
+        .alfred-live-query-preview-hint {
+            opacity: .8;
+            color: var(--ls-link-text-color);
+        }
+    }
 }

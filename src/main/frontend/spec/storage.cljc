@@ -18,7 +18,6 @@
 (s/def :zotero/setting-profile string?)
 (s/def ::commands-history (s/coll-of map?))
 (s/def :ui/wide-mode boolean?)
-(s/def :ui/show-live-query-builder? boolean?)
 (s/def :alfred/whats-new-version string?)
 (s/def :git/current-repo string?)
 (s/def ::preferred-language string?)
@@ -54,7 +53,6 @@
             :zotero/setting-profile
             ::commands-history
             :ui/wide-mode
-            :ui/show-live-query-builder?
             :alfred/whats-new-version
             :git/current-repo
             ::preferred-language

@@ -91,7 +91,6 @@
      :ui/system-theme?                      ((fnil identity (or util/mac? util/win32? false)) (storage/get :ui/system-theme?))
      :ui/custom-theme                       (or (storage/get :ui/custom-theme) {:light {:mode "light"} :dark {:mode "dark"}})
      :ui/wide-mode?                         (storage/get :ui/wide-mode)
-     :ui/show-live-query-builder?            (true? (storage/get :ui/show-live-query-builder?))
      :ui/radix-color                        (storage/get :ui/radix-color)
 
      ;; ui/collapsed-blocks is to separate the collapse/expand state from db for:
