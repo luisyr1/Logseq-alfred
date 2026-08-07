@@ -2,6 +2,12 @@ name: Build Alfred for macOS Apple Silicon
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-alfred-macos.yml
+      - resources/forge.config.js
 
 permissions:
   contents: write
