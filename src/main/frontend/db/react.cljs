@@ -23,6 +23,10 @@
 ;; ::block-and-children
 ;; get block&children react-query
 (s/def ::block-and-children (s/tuple #(= ::block-and-children %) uuid?))
+;; ::alfred-block-children
+;; immediate children of a block, invalidated like ::block-and-children.
+;; Kept separate so it never shares a cache entry with `get-paginated-blocks`.
+(s/def ::alfred-block-children (s/tuple #(= ::alfred-block-children %) int?))
 
 ;; ::journals
 ;; get journal-list react-query
@@ -39,6 +43,7 @@
 (s/def ::react-query-keys (s/or :block ::block
                                 :page-blocks ::page-blocks
                                 :block-and-children ::block-and-children
+                                :alfred-block-children ::alfred-block-children
                                 :journals ::journals
                                 :page<-pages ::page<-pages
                                 :refs ::refs
@@ -285,7 +290,8 @@
         block-children-keys (->>
                              (keys @query-state)
                              (keep (fn [ks]
-                                     (when (and (= ::block-and-children (second ks))
+                                     (when (and (contains? #{::block-and-children ::alfred-block-children}
+                                                           (second ks))
                                                 (contains? parent-ids (last ks)))
                                        (vec (rest ks))))))]
     (->>

@@ -1,0 +1,372 @@
+/* {{cronograma}} — visual timeline for Alfred's daily agenda.
+   Everything is themed through --ls-* custom properties so light/dark both work;
+   "past" is opacity on the normal text colour rather than a hard-coded grey. */
+
+.alfred-cronograma {
+  --alfred-rail: 68px;
+
+  margin: 0.25rem 0 0.4rem;
+  border: 1px solid var(--ls-border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  background-color: var(--ls-secondary-background-color, transparent);
+}
+
+/* ---------- header ---------- */
+
+.alfred-cronograma-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--ls-border-color, rgba(0, 0, 0, 0.08));
+  background-color: var(--ls-tertiary-background-color, rgba(0, 0, 0, 0.03));
+}
+
+.alfred-cronograma-cab-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--ls-primary-text-color);
+  cursor: pointer;
+  user-select: none;
+}
+
+.alfred-cronograma-cab-titulo:hover {
+  color: var(--ls-link-text-color);
+}
+
+.alfred-cronograma-cab-meta {
+  font-size: 0.78rem;
+  opacity: 0.6;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- day ---------- */
+
+.alfred-cronograma-dia-cab {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem 0.1rem;
+}
+
+.alfred-cronograma-dia-nombre {
+  font-weight: 600;
+}
+
+.alfred-cronograma-dia-mes {
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
+.alfred-cronograma-vacio {
+  padding: 0.5rem 0.75rem 0.65rem;
+  font-size: 0.82rem;
+  opacity: 0.45;
+  font-style: italic;
+}
+
+/* ---------- all-day band ---------- */
+
+.alfred-cronograma-allday {
+  margin: 0.2rem 0.6rem 0;
+  padding: 0.15rem 0;
+  border-radius: 6px;
+  background-color: var(--ls-tertiary-background-color, rgba(0, 0, 0, 0.03));
+}
+
+.alfred-cronograma-allday .alfred-cronograma-hora {
+  opacity: 0.4;
+}
+
+/* ---------- the rail ---------- */
+
+.alfred-cronograma-pista {
+  position: relative;
+  padding: 0.3rem 0 0.45rem;
+}
+
+.alfred-cronograma-pista::before {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  left: var(--alfred-rail);
+  width: 1px;
+  background-color: var(--ls-primary-text-color, #000);
+  opacity: 0.14;
+}
+
+.alfred-cronograma-fila {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  padding: 0.2rem 0.7rem 0.2rem 0.75rem;
+}
+
+.alfred-cronograma-hora {
+  flex: 0 0 46px;
+  width: 46px;
+  text-align: right;
+  padding-top: 0.1rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.55;
+}
+
+.alfred-cronograma-punto {
+  position: absolute;
+  left: calc(var(--alfred-rail) - 8px);
+  top: 0.3rem;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--ls-primary-background-color, #fff);
+  border: 1px solid var(--ls-border-color, rgba(0, 0, 0, 0.2));
+  color: var(--ls-secondary-text-color);
+  cursor: pointer;
+}
+
+.alfred-cronograma-punto:hover {
+  border-color: var(--ls-link-text-color);
+  color: var(--ls-link-text-color);
+}
+
+.alfred-cronograma-punto-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0.7;
+}
+
+.alfred-cronograma-cuerpo {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 1.35rem;
+}
+
+.alfred-cronograma-titulo {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.alfred-cronograma-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+  font-size: 0.76rem;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.alfred-cronograma-dur {
+  opacity: 0.75;
+}
+
+/* ---------- state ---------- */
+
+/* Past events fade out and lose the bold — that contrast is the whole point. */
+.alfred-cronograma-fila.es-pasado {
+  opacity: 0.42;
+}
+
+.alfred-cronograma-fila.es-pasado .alfred-cronograma-titulo {
+  font-weight: 400;
+}
+
+.alfred-cronograma-fila.es-cancelado .alfred-cronograma-titulo {
+  text-decoration: line-through;
+}
+
+.alfred-cronograma-fila.es-movido .alfred-cronograma-titulo {
+  font-style: italic;
+}
+
+.alfred-cronograma-fila.es-ahora .alfred-cronograma-titulo {
+  color: var(--ls-link-text-color);
+}
+
+.alfred-cronograma-fila.es-ahora .alfred-cronograma-punto {
+  border-color: var(--ls-link-text-color);
+  box-shadow: 0 0 0 3px var(--ls-selection-background-color, rgba(0, 0, 0, 0.06));
+}
+
+/* ---------- chips ---------- */
+
+.alfred-cronograma-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--ls-border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 4px;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alfred-cronograma-chip-k {
+  opacity: 0.5;
+  text-transform: lowercase;
+}
+
+.alfred-cronograma-chip-v {
+  opacity: 0.9;
+}
+
+/* ---------- notes ---------- */
+
+.alfred-cronograma-notas-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  opacity: 0.6;
+  cursor: pointer;
+  user-select: none;
+}
+
+.alfred-cronograma-notas-btn:hover {
+  opacity: 1;
+  color: var(--ls-link-text-color);
+}
+
+.alfred-cronograma-notas {
+  margin-top: 0.2rem;
+  padding-left: 0.55rem;
+  border-left: 2px solid var(--ls-border-color, rgba(0, 0, 0, 0.12));
+}
+
+.alfred-cronograma-nota {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  padding: 0.05rem 0;
+}
+
+/* ---------- gaps ---------- */
+
+.alfred-cronograma-hueco {
+  position: relative;
+}
+
+/* A gap longer than ~45 min is compressed to a fixed height and labelled,
+   so a day with a morning and an evening block stays one screen tall. */
+.alfred-cronograma-hueco.es-comprimido::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--alfred-rail);
+  width: 1px;
+  border-left: 1px dashed var(--ls-border-color, rgba(0, 0, 0, 0.2));
+  background-color: var(--ls-secondary-background-color, #fff);
+}
+
+.alfred-cronograma-hueco-label {
+  position: absolute;
+  left: calc(var(--alfred-rail) + 1.35rem - 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  opacity: 0.35;
+  white-space: nowrap;
+}
+
+/* ---------- now ---------- */
+
+.alfred-cronograma-ahora {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 0;
+  margin: 0.35rem 0;
+}
+
+.alfred-cronograma-ahora-hora {
+  flex: 0 0 46px;
+  width: 46px;
+  margin-left: 0.75rem;
+  text-align: right;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ls-link-text-color);
+}
+
+.alfred-cronograma-ahora-linea {
+  flex: 1 1 auto;
+  height: 1px;
+  margin: 0 0.7rem 0 0.55rem;
+  background-color: var(--ls-link-text-color);
+  opacity: 0.55;
+}
+
+/* ---------- compact strip for the following days ---------- */
+
+.alfred-cronograma-resto {
+  border-top: 1px solid var(--ls-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.alfred-cronograma-compacto {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.alfred-cronograma-compacto + .alfred-cronograma-compacto {
+  border-top: 1px dashed var(--ls-border-color, rgba(0, 0, 0, 0.06));
+}
+
+.alfred-cronograma-compacto-dia {
+  flex: 0 0 46px;
+  width: 46px;
+  opacity: 0.6;
+  font-weight: 500;
+}
+
+.alfred-cronograma-compacto-vacio {
+  opacity: 0.35;
+  font-style: italic;
+}
+
+.alfred-cronograma-compacto-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.9rem;
+  min-width: 0;
+}
+
+.alfred-cronograma-compacto-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.alfred-cronograma-compacto-hora {
+  opacity: 0.5;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.alfred-cronograma-compacto-titulo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

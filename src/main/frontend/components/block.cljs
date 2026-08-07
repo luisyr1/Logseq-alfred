@@ -14,6 +14,8 @@
             [frontend.components.datetime :as datetime-comp]
             [frontend.components.lazy-editor :as lazy-editor]
             [frontend.components.macro :as macro]
+            [frontend.components.daily-card] ;; registers {{card}} macro
+            [frontend.components.cronograma] ;; registers {{cronograma}} macro
             [frontend.components.plugins :as plugins]
             [frontend.components.query.builder :as query-builder-component]
             [frontend.components.svg :as svg]
@@ -2854,6 +2856,8 @@
         edit-input-id (str "edit-block-" blocks-container-id "-" uuid)
         edit? (state/sub [:editor/editing? edit-input-id])
         card? (string/includes? data-refs-self "\"card\"")
+        ;; Visual {{card}} macro (not #card flashcards)
+        daily-card? (= "card" (get-in block [:block/properties :logseq.macro-name]))
         review-cards? (:review-cards? config)
         own-number-list? (:own-order-number-list? config)
         order-list? (boolean own-number-list?)
@@ -2868,6 +2872,7 @@
        :class (str uuid
                    (when pre-block? " pre-block")
                    (when (and card? (not review-cards?)) " shadow-md")
+                   (when daily-card? " is-daily-card")
                    (when selected? " selected")
                    (when order-list? " is-order-list")
                    (when (string/blank? content) " is-blank"))
