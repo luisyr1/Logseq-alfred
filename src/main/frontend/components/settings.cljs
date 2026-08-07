@@ -14,7 +14,6 @@
             [frontend.db :as db]
             [frontend.dicts :as dicts]
             [frontend.handler.config :as config-handler]
-            [frontend.handler :as handler]
             [frontend.handler.file-sync :as file-sync-handler]
             [frontend.handler.global-config :as global-config-handler]
             [frontend.handler.notification :as notification]
@@ -121,7 +120,7 @@
           "update-downloaded"
           [:p (t :updater/new-version-install)
            [:a.link.ml-2
-            {:on-click #(handler/quit-and-install-new-version!)}
+            {:on-click #(js/window.apis.installUpdatesAndQuitApp)}
             (t :updater/quit-and-install)]]
 
           "error"
