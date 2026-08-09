@@ -225,9 +225,13 @@ fi")
                              (check-for-updates (merge opts {:args args}))
                              #(reset! *update-pending nil))))
         install-listener (fn [_e quit-app?]
-                           (when-let [dest-file (:dest-file @*update-ready-to-install)]
-                             (install-personal-update! dest-file)
-                             (and quit-app? (js/setTimeout #(.quit app) 500))))]
+                           (if-let [dest-file (:dest-file @*update-ready-to-install)]
+                             (do
+                               (install-personal-update! dest-file)
+                               (when quit-app?
+                                 (js/setTimeout #(.quit app) 500))
+                               true)
+                             false))]
     (.handle ipcMain check-channel check-listener)
     (.handle ipcMain install-channel install-listener)
     #(do
