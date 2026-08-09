@@ -37,13 +37,14 @@
 (defonce *teardown-fn (volatile! nil))
 (defonce *quit-dirty? (volatile! true))
 (defonce preview? (= "1" (gobj/get (.-env js/process) "LOGSEQ_ALFRED_PREVIEW")))
+(defonce preview-updater? (= "1" (gobj/get (.-env js/process) "LOGSEQ_ALFRED_PREVIEW_UPDATER")))
 
 ;; Handle creating/removing shortcuts on Windows when installing/uninstalling.
 (when (js/require "electron-squirrel-startup") (.quit app))
 
 (defn setup-updater! [^js win]
   ;; Personal updater for the Logseq Alfred fork.
-  (when-not (or linux? preview?)
+  (when (and mac? (or (not preview?) preview-updater?))
     (init-updater {:repo   "luisyr1/Logseq-alfred"
                    :win    win})))
 

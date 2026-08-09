@@ -30,6 +30,20 @@
         parts (take 3 parts)]
     (string/join "." parts)))
 
+(defn- mac-asset-labels
+  []
+  (case (.-arch js/process)
+    "arm64" ["darwin-arm64" "Apple-Silicon"]
+    "x64" ["darwin-x64" "Intel"]
+    []))
+
+(defn- matching-mac-zip?
+  [asset]
+  (let [asset-name (:name asset)]
+    (and (string? asset-name)
+         (string/ends-with? asset-name ".zip")
+         (some #(string/includes? asset-name %) (mac-asset-labels)))))
+
 (defn get-latest-artifact-info
   [repo]
   (let [endpoint (str "https://api.github.com/repos/" repo "/releases/latest")]
@@ -42,14 +56,13 @@
              text (when-not (.-ok res) (.text res))
              release-json (when (.-ok res) (.json res))]
        (if (.-ok res)
-         (let [release (bean/->clj release-json)
-               remote-version (some-> (:tag_name release)
-                                      (re-find #"\d+\.\d+\.\d+"))
-               asset (first (filter #(and (string/includes? (:name %) "Apple-Silicon")
-                                          (string/ends-with? (:name %) ".zip"))
-                                    (:assets release)))]
+         (let [release (js->clj release-json :keywordize-keys true)
+               remote-version (when-let [tag-name (:tag_name release)]
+                                (re-find #"\d+\.\d+\.\d+" (str tag-name)))
+               asset (first (filter matching-mac-zip? (:assets release)))]
            (when-not (and remote-version asset)
-             (throw (js/Error. "The latest Alfred release has no Apple Silicon ZIP")))
+             (throw (js/Error. (str "The latest Alfred release has no compatible macOS ZIP for "
+                                    (.-arch js/process)))))
            {:name (or (:name release) (:tag_name release))
             :notes (:body release)
             :version remote-version
