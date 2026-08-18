@@ -165,29 +165,81 @@
       node-path/dirname
       node-path/dirname))
 
+(def ^:private staging-dir-prefix "logseq-alfred-update-")
+
+(defn- staging-dir?
+  [dir]
+  (and (string? dir)
+       (string/starts-with? (node-path/basename dir) staging-dir-prefix)))
+
+(defn- remove-staging-dir!
+  [dir]
+  (when (staging-dir? dir)
+    (try
+      (fs/rmSync dir #js {:recursive true :force true})
+      (catch :default e
+        (logger/warn "[updater] the staging copy could not be removed" e)))))
+
+(defn- cleanup-stale-staging-dirs!
+  "Removes update copies left behind by interrupted installs. macOS keeps every
+   app bundle it finds registered in LaunchServices, so a half deleted copy in
+   the temporary folder can hijack the app launch later on."
+  []
+  (when mac?
+    (try
+      (let [tmp (os/tmpdir)
+            one-hour-ago (- (js/Date.now) (* 60 60 1000))]
+        (doseq [entry (js->clj (fs/readdirSync tmp))
+                :let [dir (node-path/join tmp entry)]
+                :when (staging-dir? dir)]
+          (try
+            ;; keep whatever an install running right now may still need
+            (when (< (.-mtimeMs (fs/statSync dir)) one-hour-ago)
+              (debug "removing stale staging copy" dir)
+              (remove-staging-dir! dir))
+            (catch :default _e nil))))
+      (catch :default e
+        (logger/warn "[updater] stale staging copies could not be swept" e)))))
+
 (defn- extract-update!
   [zip-file]
   (when-not mac?
     (throw (js/Error. "Personal updates are currently supported only on macOS")))
-  (let [staging-dir (fs/mkdtempSync (node-path/join (os/tmpdir) "logseq-alfred-update-"))
-        result (child-process/spawnSync "/usr/bin/ditto" #js ["-x" "-k" zip-file staging-dir])
-        app-name (first (filter #(string/ends-with? % ".app")
-                                (js->clj (fs/readdirSync staging-dir))))]
-    (when-not (zero? (.-status result))
-      (throw (js/Error. "The downloaded update could not be extracted")))
-    (when-not app-name
-      (throw (js/Error. "The downloaded update contains no macOS application")))
-    (node-path/join staging-dir app-name)))
+  (let [staging-dir (fs/mkdtempSync (node-path/join (os/tmpdir) staging-dir-prefix))]
+    (try
+      (let [result (child-process/spawnSync "/usr/bin/ditto" #js ["-x" "-k" zip-file staging-dir])
+            app-name (first (filter #(string/ends-with? % ".app")
+                                    (js->clj (fs/readdirSync staging-dir))))]
+        (when-not (zero? (.-status result))
+          (throw (js/Error. "The downloaded update could not be extracted")))
+        (when-not app-name
+          (throw (js/Error. "The downloaded update contains no macOS application")))
+        {:staging-dir staging-dir
+         :app (node-path/join staging-dir app-name)})
+      (catch :default e
+        (remove-staging-dir! staging-dir)
+        (throw e)))))
 
 (def update-helper-script
   "pid=\"$1\"
 source_app=\"$2\"
 target_app=\"$3\"
+staging_dir=\"$4\"
+zip_file=\"$5\"
 backup_app=\"${target_app}.previous\"
+cleanup() {
+  case \"$staging_dir\" in
+    */logseq-alfred-update-*) /bin/rm -rf \"$staging_dir\" ;;
+  esac
+}
+trap cleanup EXIT
 while /bin/kill -0 \"$pid\" 2>/dev/null; do /bin/sleep 0.2; done
 /bin/rm -rf \"$backup_app\"
 if /bin/mv \"$target_app\" \"$backup_app\" && /usr/bin/ditto \"$source_app\" \"$target_app\"; then
   /usr/bin/xattr -dr com.apple.quarantine \"$target_app\" 2>/dev/null || true
+  case \"$zip_file\" in
+    *.zip) /bin/rm -f \"$zip_file\" ;;
+  esac
   /usr/bin/open \"$target_app\"
 else
   /bin/rm -rf \"$target_app\"
@@ -204,13 +256,15 @@ fi")
     (when (string/starts-with? target-app "/Volumes/")
       (throw (js/Error. "Move Logseq Alfred to Applications before updating")))
     (fs/accessSync target-parent (.-W_OK (.-constants fs)))
-    (let [staged-app (extract-update! zip-file)
+    (let [{:keys [staging-dir app]} (extract-update! zip-file)
           helper (child-process/spawn "/bin/sh"
                                       #js ["-c" update-helper-script
                                            "logseq-alfred-updater"
                                            (str js/process.pid)
-                                           staged-app
-                                           target-app]
+                                           app
+                                           target-app
+                                           staging-dir
+                                           zip-file]
                                       #js {:detached true :stdio "ignore"})]
       (.unref helper))))
 
@@ -232,6 +286,7 @@ fi")
                                  (js/setTimeout #(.quit app) 500))
                                true)
                              false))]
+    (cleanup-stale-staging-dirs!)
     (.handle ipcMain check-channel check-listener)
     (.handle ipcMain install-channel install-listener)
     #(do
