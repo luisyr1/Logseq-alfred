@@ -109,7 +109,7 @@
                   "Auto saved by Logseq"
                   message)]
     (->
-     (.runAutoCommit sync-policy
+     ((gobj/get sync-policy "runAutoCommit")
                      graph-path
                      (fs/existsSync (.join node-path graph-path ".git"))
                      (fn [args] (run-git2! graph-path args))
