@@ -9,6 +9,8 @@ on:
       - .github/workflows/build-alfred-macos.yml
       - resources/forge.config.js
       - resources/package.json
+      - resources/git-sync-policy.cjs
+      - scripts/tests/git-sync-policy.test.cjs
       - src/electron/**
       - src/main/frontend/**
 
@@ -78,6 +80,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: yarn
+
+      - name: Test Git synchronization policy
+        run: node --test scripts/tests/git-sync-policy.test.cjs
 
       - name: Install Java
         uses: actions/setup-java@v4

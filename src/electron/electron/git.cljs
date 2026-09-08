@@ -12,6 +12,9 @@
 
 (def log-error (partial logger/error "[Git]"))
 
+;; Copied beside electron.js by the existing resource build step.
+(defonce sync-policy (js/require (.join node-path js/__dirname "git-sync-policy.cjs")))
+
 (defn get-graph-git-dir
   [graph-path]
   (when-let [graph-path (some-> graph-path
@@ -106,17 +109,22 @@
                   "Auto saved by Logseq"
                   message)]
     (->
-     (p/let [_ (init! graph-path)
-             _ (add-all! graph-path)]
-       (commit! graph-path message))
+     (.runAutoCommit sync-policy
+                     graph-path
+                     (fs/existsSync (.join node-path graph-path ".git"))
+                     (fn [args] (run-git2! graph-path args))
+                     (fn []
+                       (p/let [_ (init! graph-path)
+                               _ (add-all! graph-path)]
+                         (commit! graph-path message))))
      (p/catch (fn [error]
-                (when (and
-                       (string? error)
-                       (not (string/blank? error)))
-                  (if (string/starts-with? error "Author identity unknown")
-                    (utils/send-to-renderer "setGitUsernameAndEmail" {:type "git"})
-                    (utils/send-to-renderer "notification" {:type "error"
-                                                            :payload (str error "\nIf you don't want to see those errors or don't need git, you can disable the \"Git auto commit\" feature on Settings > Version control.")}))))))))
+                (let [error (if (string? error) error (.-message error))]
+                  (when-not (string/blank? error)
+                    (if (string/starts-with? error "Author identity unknown")
+                      (utils/send-to-renderer "setGitUsernameAndEmail" {:type "git"})
+                      (utils/send-to-renderer "notification"
+                                              {:type "error"
+                                               :payload (str error "\nIf you don't need automatic Git commits, disable them in Settings > Version control.")})))))))))
 
 (defn add-all-and-commit!
   ([]
